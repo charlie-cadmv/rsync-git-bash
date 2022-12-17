@@ -1,0 +1,138 @@
+
+#TO DO: break it up into steps, use step variables to share values
+name: 'Rsync'
+description: 'Rsync for self-hosted runners on Windows that have Git Bash installed'
+inputs:
+  opts:
+    description: options to pass to rsync
+    required: true
+  user:
+    description: ssh username
+    required: true
+  host:
+    description: ssh host
+    required: true
+  localPath:
+    description: local directory
+    required: true
+  remotePath:
+    description: remote directory
+    required: true
+  localToRemote:
+    description: Copy local files to remote. Use false to copy remote to local. Default is local -> remote.
+    type: boolean
+    default: true
+  base64key:
+    description: base64-encoded ssh key file
+    required: true
+  rsyncToolsPath:
+    description: dir to stash a few small executables and possibly reuse on the next run. Alternative to writing to Git Bash's ./usr/bin
+    required: false
+  copyToGitUsrBin:
+    description: Whether to try to copy the rsync binaries into your Git Bash ./usr/bin dir (speeds up this action, useful for later too)
+    type: boolean
+    default: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Add deps for rsync
+      shell: bash
+      run: |
+
+        makeToolsDir() {
+          #Make a dir in a persistent location
+          if ! [ -e "${1}" ] ; then
+            if ! (2>err mkdir -p "${1}") ; then
+              #failed to make the dir, stop here.
+              cat err
+              echo "$2 $1"
+              /bin/false
+            fi
+          fi
+        }
+
+        if [ -z "${{ inputs.rsyncToolsPath }}" ] ; then
+          toolsDir="../../rsynctools"
+          makeToolsDir "$toolsDir" "Unable to create the default directory"
+        else
+          toolsDir="${{ inputs.rsyncToolsPath }}"
+          makeToolsDir "$toolsDir" "Unable to create the specified directory"
+        fi
+
+        pushd ${toolsDir}
+
+        #Any downloaded executables will go into ./usr/bin
+        export PATH="$PATH:$(pwd)/usr/bin"
+        if ! (2>/dev/null ls -altr usr/bin) ; then mkdir -p usr/bin ;fi
+
+        #Some executables may not be in the path for some reason, like curl.exe
+        if ! (2>/dev/null which curl) ; then export PATH=$PATH:/mingw64/bin ;fi
+
+        #Does it already have zsdt? Git Bash doesn't, and we need it to get rsync.
+        if ! (2>/dev/null which zstd) ; then
+          echo "Getting zsdt"
+          zstdVersion=zstd-v1.5.2-win64
+          curl -Lo zstd.zip "https://github.com/facebook/zstd/releases/download/v1.5.2/${zstdVersion}.zip"
+          unzip -p zstd.zip "${zstdVersion}/zstd.exe" > ./usr/bin/zstd.exe
+        fi
+        
+        #If we don't already have rsync in the path, download and extract the necessary
+        # executables from msys2 into ./usr/bin/
+        if ! (2>/dev/null which rsync) && (2>/dev/null rsync --version) ; then
+
+          getFromMsys2() {
+            f=$(mktemp)
+            curl.exe --output $f.pkg.tar.zst --url "https://repo.msys2.org/msys/x86_64/${1}-x86_64.pkg.tar.zst"
+            zstd -d $f.pkg.tar.zst
+            rm $f.pkg.tar.zst
+            tar -xvf $f.pkg.tar
+            rm $f.pkg.tar
+          }
+
+          getFromMsys2 rsync-3.2.3-1
+          getFromMsys2 libzstd-1.5.2-1
+          getFromMsys2 libxxhash-0.8.0-1
+          getFromMsys2 liblz4-1.9.4-1
+
+          if [ "${{ inputs.copyToGitUsrBin }}" = "true" ] ; then
+            if ! (2>err cp usr/bin/* /usr/bin) ; then
+              if [ -f err ] ; then cat err ; fi
+              echo "Skipping optional copy to /usr/bin"
+            fi
+          fi
+        fi
+
+        popd ;#exit ${toolsDir}
+
+        #All the tools should be on the path now. Test with rsync --version
+        if ! (2>err rsync --version) ; then
+          cat err
+          echo "Something went wrong and we can't run rsync; please file an issue and include this log."
+          /bin/false
+        fi
+
+        #Use the base64-encoded string in the secret to create a key file for ssh to use
+        echo "${{ inputs.base64key }}" |base64 -d >keyfile
+
+        if [ ${{ inputs.localToRemote }} = "true" ] ; then
+          #copying local to remote
+          src=${{ inputs.localPath }}
+          dest=
+        else
+          #copying remote to local
+          src=
+          dest=${{ inputs.localPath }}
+        fi
+        if [ -f err ]; then rm err ; fi
+        if (2>err rsync --delete -avzhe "ssh -oStrictHostKeyChecking=no -i keyfile" "${src}" ${{ inputs.user }}@${{ inputs.host }}:${{ inputs.remotePath }} "${dest}") ; then
+          cat err
+        fi
+
+        rm keyfile ;#clean up the keyfile
+
+        #If rsync failed, clean up the error log and report the failure here
+        if [ -f err ]; then
+          rm err
+          /bin/false
+        fi
