@@ -101,9 +101,8 @@ runs:
         echo "${{ inputs.base64key }}" |base64 -d >keyfile
         if (2>err rsync --delete -avzhe "ssh -oStrictHostKeyChecking=no -i keyfile" ${{ inputs.src }} ${{ inputs.user }}@${{ inputs.host }}:${{ inputs.dest }}) ; then
           rm keyfile
-          cat err
-          /bin/false ;#report the failure after we've cleaned up the keyfile
         else
           rm keyfile
+          cat err
+          /bin/false ;#report the failure after we've cleaned up the keyfile
         fi
-
