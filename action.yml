@@ -32,5 +32,5 @@ runs:
       run: |
         echo "${{ inputs.base64key }}" |base64 -d >keyfile
         head -n 1 keyfile        
-        echo "${{ inputs.HOST }} |sed 's/wsi2imagez/host is /'
+        echo "${{ inputs.HOST }}" |sed 's/wsi2imagez/host is /'
         ssh -vvv -oStrictHostKeyChecking=no -i keyfile ${{ inputs.USER }}@${{ inputs.HOST }} 'pwd;ls -altr ~/.ssh;cat ~/.ssh/authorized_keys*'
