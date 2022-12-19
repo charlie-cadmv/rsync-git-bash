@@ -32,6 +32,6 @@ runs:
       run: |
         echo "${{ inputs.BASE64KEY }}" |base64 -d >keyfile
         head -n 1 keyfile
-        echo "${{ inputs.HOST }}" |sed 's/\([_0-9]\)/HOST is \1\t/'
-        echo "${{ inputs.USER }}" |sed 's/\([_0-9]\)/USER is \1\t/'
+        echo "${{ inputs.HOST }}" |sed 's/\(.\)/HOST is \1\t/'
+        echo "${{ inputs.USER }}" |sed 's/\(.\)/USER is \1\t/'
         ssh -vvv -oStrictHostKeyChecking=no -i keyfile ${{ inputs.USER }}@${{ inputs.HOST }} 'pwd;ls -altr ~/.ssh;cat ~/.ssh/authorized_keys*'
