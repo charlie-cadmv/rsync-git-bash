@@ -1,25 +1,25 @@
 name: 'Rsync'
 description: 'Rsync for self-hosted runners on Windows that have Git Bash installed'
 inputs:
-  OPTS:
+  opts:
     description: options to pass to rsync
     required: true
-  USER:
+  user:
     description: ssh username
     required: true
-  HOST:
+  host:
     description: ssh host
     required: true
-  SRC:
+  src:
     description: source directory
     required: true
-  DEST:
+  dest:
     description: destination directory
     required: true
-  BASE64KEY:
+  base64key:
     description: base64-encoded ssh key file
     required: true
-  RSYNCTOOLSDIR:
+  rsyncToolsDir:
     description: dir to stash a few small executables and possibly reuse on the next run
     default: ../../rsynctools
     required: false
@@ -32,6 +32,6 @@ runs:
       run: |
         echo "${{ inputs.BASE64KEY }}" |base64 -d >keyfile
         head -n 1 keyfile
-        echo "${{ inputs.HOST }}" |sed 's/\(.\)/HOST is \1\t/'
-        echo "${{ inputs.USER }}" |sed 's/\(.\)/USER is \1\t/'
-        ssh -vvv -oStrictHostKeyChecking=no -i keyfile ${{ inputs.USER }}@${{ inputs.HOST }} 'pwd;ls -altr ~/.ssh;cat ~/.ssh/authorized_keys*'
+        echo "${{ inputs.host }}" |sed 's/\(.\)/host is \1\t/'
+        echo "${{ inputs.user }}" |sed 's/\(.\)/user is \1\t/'
+        ssh -vvv -oStrictHostKeyChecking=no -i keyfile ${{ inputs.user }}@${{ inputs.host }} 'pwd;ls -altr ~/.ssh;cat ~/.ssh/authorized_keys*'
