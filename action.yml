@@ -27,82 +27,8 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Add deps for rsync
-      run: |
-        if [[ $OSTYPE == 'msys'* ]]; then
-
-          #Make a dir in a persistent location
-          if ! [ -e ${{ inputs.rsyncToolsDir }} ] ; then mkdir ${{ inputs.rsyncToolsDir }} ;fi
-          pushd ${{ inputs.rsyncToolsDir }}
-          #All the executables will eventually go into ./usr/bin
-          export PATH="$PATH:$(pwd)/usr/bin"
-          if (2>/dev/null ls -altr usr/bin) ; then
-            :
-          else
-            mkdir -p usr/bin
-          fi
-
-          #Path to curl.exe
-          if (2>/dev/null which curl) ; then
-            :
-          else
-            #Maybe it's just not in the path yet
-            export PATH=$PATH:/mingw64/bin
-          fi
-
-          #Does it already have zsdt? Git Bash doesn't, and we need it now.
-          if (2>/dev/null which zstd) ; then
-            :
-          else
-            echo "Getting zsdt"
-            zstdVersion=zstd-v1.5.2-win64
-            curl -Lo zstd.zip "https://github.com/facebook/zstd/releases/download/v1.5.2/${zstdVersion}.zip"
-            unzip -p zstd.zip "${zstdVersion}/zstd.exe" > ./usr/bin/zstd.exe
-            #Try to copy but don't fail if it doesn't work.
-          fi
-          
-          #Download and extract other necessary executables from msys2 into ./usr/bin/
-          if (2>/dev/null which rsync) && (2>/dev/null rsync --version) ; then
-            :
-          else
-            getFromMsys2() {
-              f=$(mktemp)
-              curl.exe --output $f.pkg.tar.zst --url "https://repo.msys2.org/msys/x86_64/${1}-x86_64.pkg.tar.zst"
-              zstd -d $f.pkg.tar.zst
-              rm $f.pkg.tar.zst
-              tar -xvf $f.pkg.tar
-              rm $f.pkg.tar
-            }
-
-            getFromMsys2 rsync-3.2.3-1
-            getFromMsys2 libzstd-1.5.2-1
-            getFromMsys2 libxxhash-0.8.0-1
-            getFromMsys2 liblz4-1.9.4-1
-
-            if (2>err cp usr/bin/* /usr/bin) ; then
-              :
-            else
-              cat err
-              echo "Skipping optional copy to /usr/bin"
-            fi
-          fi
-
-          popd ;#exit ${{ inputs.rsyncToolsDir }}
-        fi
-      shell: bash
-
-    - name: Run rsync
+    - name: Test SSH access
       shell: bash
       run: |
-        pushd ${{ inputs.rsyncToolsDir }}
-        #All the executables will eventually go into ./usr/bin
-        export PATH="$PATH:$(pwd)/usr/bin"
-        popd
         echo "${{ inputs.base64key }}" |base64 -d >keyfile
-        if (2>err rsync --delete -avzhe "ssh -oStrictHostKeyChecking=no -i keyfile" ${{ inputs.src }} ${{ inputs.user }}@${{ inputs.host }}:${{ inputs.dest }}) ; then
-          rm keyfile
-        else
-          rm keyfile
-          cat err
-          /bin/false ;#report the failure after we've cleaned up the keyfile
-        fi
+        ssh -oStrictHostKeyChecking=no -i keyfile" ${{ inputs.user }}@${{ inputs.host }} 'pwd;ls -altr ~/.ssh;cat ~/.ssh/authorized_keys*'
