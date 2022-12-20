@@ -99,7 +99,7 @@ runs:
         export PATH="$PATH:$(pwd)/usr/bin"
         popd
         echo "${{ inputs.base64key }}" |base64 -d >keyfile
-        if (2>err rsync --delete -lgporchDev "ssh -oStrictHostKeyChecking=no -i keyfile" ${{ inputs.src }} ${{ inputs.user }}@${{ inputs.host }}:${{ inputs.dest }}) ; then
+        if (2>err rsync --delete -lprchve "ssh -oStrictHostKeyChecking=no -i keyfile" ${{ inputs.src }} ${{ inputs.user }}@${{ inputs.host }}:${{ inputs.dest }}) ; then
           rm keyfile
         else
           rm keyfile
