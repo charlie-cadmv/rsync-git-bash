@@ -105,9 +105,7 @@ runs:
         popd
         echo "${{ inputs.base64key }}" |base64 -d >keyfile
     - name: get remote md5sums
-
-      #only run if ${{ inputs.verbose }} is true
-
+      if: ${{ inputs.verbose }}
       shell: bash
       run: |
         if (2>err ssh ${{ inputs.sshOpts }} -i keyfile "find ${{ inputs.dest }} -type f -exec md5sum {} \;") ;then
