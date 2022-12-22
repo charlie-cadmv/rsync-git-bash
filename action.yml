@@ -22,7 +22,13 @@ inputs:
   rsyncToolsDir:
     description: dir to stash a few small executables and possibly reuse on the next run
     default: ../../rsynctools
-    required: false
+  verbose:
+    description: Calculate md5sums of the files that will be replaced and write them to the log
+    type: boolean
+    default: false
+   sshOpts:
+    description: ssh command options to use
+      default: -oStrictHostKeyChecking=no
 
 runs:
   using: "composite"
@@ -90,8 +96,7 @@ runs:
           popd ;#exit ${{ inputs.rsyncToolsDir }}
         fi
       shell: bash
-
-    - name: Run rsync
+    - name: write ssh key
       shell: bash
       run: |
         pushd ${{ inputs.rsyncToolsDir }}
@@ -99,7 +104,26 @@ runs:
         export PATH="$PATH:$(pwd)/usr/bin"
         popd
         echo "${{ inputs.base64key }}" |base64 -d >keyfile
-        if (2>err rsync ${{ opts }} -e "ssh -oStrictHostKeyChecking=no -i keyfile" ${{ inputs.src }} ${{ inputs.user }}@${{ inputs.host }}:${{ inputs.dest }}) ; then
+    - name: get remote md5sums
+
+      #only run if ${{ inputs.verbose }} is true
+
+      shell: bash
+      run: |
+        if (2>err ssh ${{ inputs.sshOpts }} -i keyfile "find ${{ inputs.dest }} -type f -exec md5sum {} \;") ;then
+          :
+        else
+          cat err
+          /bin/false
+        fi
+    - name: Run rsync
+      shell: bash
+      run: |
+        pushd ${{ inputs.rsyncToolsDir }}
+        #All the executables will eventually go into ./usr/bin
+        export PATH="$PATH:$(pwd)/usr/bin"
+        popd
+        if (2>err rsync ${{ opts }} -e "ssh ${{ inputs.sshOpts }} -i keyfile" ${{ inputs.src }} ${{ inputs.user }}@${{ inputs.host }}:${{ inputs.dest }}/) ; then
           rm keyfile
         else
           rm keyfile
