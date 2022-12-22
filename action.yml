@@ -123,7 +123,7 @@ runs:
         #All the executables will eventually go into ./usr/bin
         export PATH="$PATH:$(pwd)/usr/bin"
         popd
-        if (2>err rsync ${{ input.rsyncOpts }} -e "ssh ${{ inputs.sshOpts }} -i keyfile" ${{ inputs.src }} ${{ inputs.user }}@${{ inputs.host }}:${{ inputs.dest }}/) ; then
+        if (2>err rsync ${{ inputs.rsyncOpts }} -e "ssh ${{ inputs.sshOpts }} -i keyfile" ${{ inputs.src }} ${{ inputs.user }}@${{ inputs.host }}:${{ inputs.dest }}/) ; then
           rm keyfile
         else
           rm keyfile
