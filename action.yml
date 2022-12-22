@@ -3,7 +3,7 @@ description: 'Rsync for self-hosted runners on Windows that have Git Bash instal
 inputs:
   rsyncOpts:
     description: options to pass to rsync
-    required: true
+    default: --delete -zlrchv
   user:
     description: ssh username
     required: true
