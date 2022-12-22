@@ -108,7 +108,7 @@ runs:
       if: ${{ inputs.verbose }}
       shell: bash
       run: |
-        if (2>err ssh ${{ inputs.sshOpts }} -i keyfile "find ${{ inputs.dest }} -type f -exec md5sum {} \;") ;then
+        if (2>err ssh ${{ inputs.sshOpts }} -i keyfile ${{ inputs.user }}@${{ inputs.host }} "find ${{ inputs.dest }} -type f -exec md5sum {} \;") ;then
           :
         else
           cat err
