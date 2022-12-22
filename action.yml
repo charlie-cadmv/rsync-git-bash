@@ -26,9 +26,9 @@ inputs:
     description: Calculate md5sums of the files that will be replaced and write them to the log
     type: boolean
     default: false
-   sshOpts:
+  sshOpts:
     description: ssh command options to use
-      default: -oStrictHostKeyChecking=no
+    default: -oStrictHostKeyChecking=no
 
 runs:
   using: "composite"
