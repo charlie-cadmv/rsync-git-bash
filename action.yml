@@ -42,11 +42,7 @@ runs:
           pushd ${{ inputs.rsyncToolsDir }}
           #All the executables will eventually go into ./usr/bin
           export PATH="$PATH:$(pwd)/usr/bin"
-          if (2>/dev/null ls -altr usr/bin) ; then
-            :
-          else
-            mkdir -p usr/bin
-          fi
+          if ! [ -d usr/bin ] ; then mkdir -p usr/bin ; fi
 
           #Path to curl.exe
           if (2>/dev/null which curl) ; then
